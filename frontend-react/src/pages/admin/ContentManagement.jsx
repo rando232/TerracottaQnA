@@ -69,7 +69,12 @@ const ContentManagement = () => {
       ]);
       setCategories(categoriesRes.data);
       setTags(tagsRes.data);
-      setDocuments(documentsRes.data);
+      // Map status field to published boolean for display
+      const documentsWithPublished = documentsRes.data.map(doc => ({
+        ...doc,
+        published: doc.status === 'published'
+      }));
+      setDocuments(documentsWithPublished);
       setAnalytics(analyticsRes.data);
       setSearchLogs(searchLogsRes.data);
       setCategoryStats(categoryStatsRes.data);
@@ -412,11 +417,11 @@ const ContentManagement = () => {
                       onClick={() => handleTogglePublish(doc.id, doc.published)}
                       className={`px-3 py-1 rounded text-sm font-medium ${
                         doc.published
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                       }`}
                     >
-                      {doc.published ? 'Published' : 'Unpublished'}
+                      {doc.published ? 'Unpublish' : 'Publish'}
                     </button>
                     <button
                       onClick={() => handleDeleteDocument(doc.id)}
