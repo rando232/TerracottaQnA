@@ -795,6 +795,136 @@ def update_document_status(document_id: int, status_data: dict, current_user: di
     execute_query("UPDATE documents SET published = %s WHERE id = %s", (published, document_id))
     return {"message": "Status updated successfully"}
 
+@app.get("/api/admin/content/analytics")
+def get_content_analytics(current_user: dict = Depends(get_current_user)):
+    """Get content analytics for dashboard"""
+    
+    if current_user['role'] not in ['content_manager', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Content manager access required")
+    
+    total_docs = execute_query("SELECT COUNT(*) as count FROM documents", fetch_one=True)
+    total_views = execute_query("SELECT SUM(views_count) as total FROM documents", fetch_one=True)
+    search_count = execute_query("SELECT COUNT(*) as count FROM search_queries", fetch_one=True)
+    
+    # Calculate CTR (clicks / searches)
+    total_searches = search_count['count'] if search_count else 0
+    clicked_searches = execute_query("SELECT COUNT(*) as count FROM search_queries WHERE clicked_document_id IS NOT NULL", fetch_one=True)
+    clicks = clicked_searches['count'] if clicked_searches else 0
+    ctr = f"{(clicks / total_searches * 100):.0f}%" if total_searches > 0 else "0%"
+    
+    # Vocabulary size from search engine
+    try:
+        vocabulary_size = len(search_engine.inverted_index) if search_engine else 0
+        avg_doc_length = search_engine.avgdl if search_engine else 0
+    except:
+        vocabulary_size = 0
+        avg_doc_length = 0
+    
+    # SEO coverage (placeholder - calculate based on your SEO fields)
+    seo_coverage = "100%"  # You can calculate actual coverage
+    
+    return {
+        "total_documents": total_docs['count'] if total_docs else 0,
+        "total_views": total_views['total'] if total_views and total_views['total'] else 0,
+        "search_count": total_searches,
+        "ctr": ctr,
+        "vocabulary_size": vocabulary_size,
+        "avg_doc_length": round(avg_doc_length, 2),
+        "seo_coverage": seo_coverage
+    }
+
+@app.get("/api/admin/content/search-logs")
+def get_search_logs(current_user: dict = Depends(get_current_user)):
+    """Get search and click logs"""
+    
+    if current_user['role'] not in ['content_manager', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Content manager access required")
+    
+    logs = execute_query(
+        """SELECT sq.id, sq.user_id, sq.query, sq.clicked_document_id, sq.created_at,
+           u.username
+           FROM search_queries sq
+           LEFT JOIN users u ON sq.user_id = u.id
+           ORDER BY sq.created_at DESC
+           LIMIT 100""",
+        fetch_all=True
+    )
+    
+    # Format the data
+    formatted_logs = []
+    for log in logs:
+        formatted_logs.append({
+            'id': log['id'],
+            'user_id': log['user_id'],
+            'username': log['username'],
+            'query_string': log['query'],
+            'clicked_doc_id': log['clicked_document_id'],
+            'created_at': str(log['created_at'])
+        })
+    
+    return formatted_logs
+
+@app.get("/api/admin/content/category-stats")
+def get_category_stats(current_user: dict = Depends(get_current_user)):
+    """Get category traffic and document distribution"""
+    
+    if current_user['role'] not in ['content_manager', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Content manager access required")
+    
+    stats = execute_query(
+        """SELECT c.id, c.name, 
+           COUNT(d.id) as doc_count,
+           COALESCE(SUM(d.views_count), 0) as views
+           FROM categories c
+           LEFT JOIN documents d ON c.id = d.category_id
+           GROUP BY c.id, c.name
+           ORDER BY views DESC""",
+        fetch_all=True
+    )
+    
+    # Calculate percentages
+    total_views = sum(s['views'] for s in stats)
+    for stat in stats:
+        stat['percentage'] = round((stat['views'] / total_views * 100), 0) if total_views > 0 else 0
+    
+    return stats
+
+@app.get("/api/admin/content/search-logs/export")
+def export_search_logs(format: str = 'csv', current_user: dict = Depends(get_current_user)):
+    """Export search logs as CSV or JSON"""
+    
+    if current_user['role'] not in ['content_manager', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Content manager access required")
+    
+    logs = execute_query(
+        """SELECT sq.id, sq.user_id, sq.query, sq.clicked_document_id, sq.created_at,
+           u.username
+           FROM search_queries sq
+           LEFT JOIN users u ON sq.user_id = u.id
+           ORDER BY sq.created_at DESC""",
+        fetch_all=True
+    )
+    
+    if format == 'json':
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content=logs)
+    else:  # CSV
+        import csv
+        from io import StringIO
+        from fastapi.responses import StreamingResponse
+        
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=['id', 'user_id', 'username', 'query', 'clicked_document_id', 'created_at'])
+        writer.writeheader()
+        writer.writerows(logs)
+        
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=search_logs.csv"}
+        )
+
 # ============================================================================
 # MODERATION
 # ============================================================================

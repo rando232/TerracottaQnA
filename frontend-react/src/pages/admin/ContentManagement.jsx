@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   FolderIcon,
   TagIcon,
   PencilSquareIcon,
   TrashIcon,
-  PlusIcon
+  PlusIcon,
+  ChartBarIcon,
+  MagnifyingGlassIcon,
+  EyeIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
+import { formatDistanceToNow } from 'date-fns';
 
 const ContentManagement = () => {
   const navigate = useNavigate();
@@ -17,11 +22,15 @@ const ContentManagement = () => {
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [searchLogs, setSearchLogs] = useState([]);
+  const [categoryStats, setCategoryStats] = useState([]);
   const [error, setError] = useState(null);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showTagForm, setShowTagForm] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [newTag, setNewTag] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -42,16 +51,28 @@ const ContentManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const [categoriesRes, tagsRes, documentsRes] = await Promise.all([
+      const [categoriesRes, tagsRes, documentsRes, analyticsRes, searchLogsRes, categoryStatsRes] = await Promise.all([
         axios.get('http://localhost:8000/api/categories'),
         axios.get('http://localhost:8000/api/tags'),
         axios.get('http://localhost:8000/api/admin/content', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        axios.get('http://localhost:8000/api/admin/content/analytics', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        axios.get('http://localhost:8000/api/admin/content/search-logs', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        axios.get('http://localhost:8000/api/admin/content/category-stats', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
       setCategories(categoriesRes.data);
       setTags(tagsRes.data);
       setDocuments(documentsRes.data);
+      setAnalytics(analyticsRes.data);
+      setSearchLogs(searchLogsRes.data);
+      setCategoryStats(categoryStatsRes.data);
     } catch (error) {
       setError(error.response?.data?.detail || 'Failed to load data');
     } finally {
@@ -117,6 +138,11 @@ const ContentManagement = () => {
     }
   };
 
+  const exportSearchLogs = (format) => {
+    const token = localStorage.getItem('token');
+    window.open(`http://localhost:8000/api/admin/content/search-logs/export?format=${format}&token=${token}`, '_blank');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -136,130 +162,340 @@ const ContentManagement = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Content Management</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Content Management Dashboard</h1>
 
-        {/* Categories Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center">
-              <FolderIcon className="w-6 h-6 mr-2" />
-              Categories ({categories.length})
-            </h2>
+        {/* Tabs */}
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => setShowCategoryForm(!showCategoryForm)}
-              className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center"
+              onClick={() => setActiveTab('overview')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'overview'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
             >
-              <PlusIcon className="w-5 h-5 mr-1" />
-              Add Category
+              Analytics Overview
             </button>
-          </div>
-
-          {showCategoryForm && (
-            <form onSubmit={handleCreateCategory} className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <input
-                type="text"
-                placeholder="Category name"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg mb-2"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Description"
-                value={newCategory.description}
-                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg mb-2"
-              />
-              <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
-                Create Category
-              </button>
-            </form>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map(cat => (
-              <div key={cat.id} className="p-4 border border-gray-200 rounded-lg">
-                <h3 className="font-semibold text-gray-900">{cat.name}</h3>
-                <p className="text-sm text-gray-600">{cat.description}</p>
-              </div>
-            ))}
-          </div>
+            <button
+              onClick={() => setActiveTab('taxonomy')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'taxonomy'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Categories & Tags
+            </button>
+            <button
+              onClick={() => setActiveTab('documents')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'documents'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Documents
+            </button>
+            <button
+              onClick={() => setActiveTab('search')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'search'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Search & Click Logs
+            </button>
+          </nav>
         </div>
 
-        {/* Tags Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center">
-              <TagIcon className="w-6 h-6 mr-2" />
-              Tags ({tags.length})
-            </h2>
-            <button
-              onClick={() => setShowTagForm(!showTagForm)}
-              className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center"
-            >
-              <PlusIcon className="w-5 h-5 mr-1" />
-              Add Tag
-            </button>
-          </div>
-
-          {showTagForm && (
-            <form onSubmit={handleCreateTag} className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <input
-                type="text"
-                placeholder="Tag name"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg mb-2"
-                required
-              />
-              <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
-                Create Tag
-              </button>
-            </form>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
-              <span key={tag.id} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Documents Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">All Documents ({documents.length})</h2>
-          <div className="space-y-3">
-            {documents.map(doc => (
-              <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{doc.title}</h3>
-                  <p className="text-sm text-gray-600">by {doc.author_name || doc.author_username}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleTogglePublish(doc.id, doc.published)}
-                    className={`px-3 py-1 rounded text-sm font-medium ${
-                      doc.published
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {doc.published ? 'Published' : 'Unpublished'}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteDocument(doc.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
+        {/* Analytics Overview Tab */}
+        {activeTab === 'overview' && analytics && (
+          <div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Total Corpus Views</p>
+                    <p className="text-3xl font-bold text-gray-900">{analytics.total_views?.toLocaleString() || 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">Across {analytics.total_documents} indexed Q&A records</p>
+                  </div>
+                  <EyeIcon className="w-12 h-12 text-green-600" />
                 </div>
               </div>
-            ))}
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Search & Click Log Rows</p>
+                    <p className="text-3xl font-bold text-gray-900">{analytics.search_count || 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">Click-Through Rate (CTR): {analytics.ctr || '0%'}</p>
+                  </div>
+                  <MagnifyingGlassIcon className="w-12 h-12 text-orange-600" />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Phase 2 Vocabulary Size</p>
+                    <p className="text-3xl font-bold text-gray-900">{analytics.vocabulary_size?.toLocaleString() || 0} <span className="text-lg">terms</span></p>
+                    <p className="text-xs text-gray-500 mt-1">Avg Doc Length (avgdl): {analytics.avg_doc_length || 0} tokens</p>
+                  </div>
+                  <ChartBarIcon className="w-12 h-12 text-purple-600" />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">SEO Metadata Coverage</p>
+                    <p className="text-3xl font-bold text-green-600">{analytics.seo_coverage || '0%'}</p>
+                    <p className="text-xs text-gray-500 mt-1">Title, Description, Alt Text & Keywords</p>
+                  </div>
+                  <ChartBarIcon className="w-12 h-12 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Category Traffic & Document Distribution */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Category Traffic & Document Distribution</h2>
+              <div className="space-y-3">
+                {categoryStats.map((cat) => (
+                  <div key={cat.id} className="flex items-center">
+                    <div className="w-48 text-sm font-medium text-gray-700">{cat.name} ({cat.doc_count} docs)</div>
+                    <div className="flex-1">
+                      <div className="flex items-center">
+                        <div className="flex-1 bg-gray-200 rounded-full h-4 mr-4">
+                          <div
+                            className="bg-orange-500 h-4 rounded-full"
+                            style={{ width: `${cat.percentage || 0}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-sm text-gray-600 w-32">
+                          {cat.views?.toLocaleString() || 0} views ({cat.percentage}%)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Categories & Tags Tab */}
+        {activeTab === 'taxonomy' && (
+          <div>
+            {/* Categories Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                  <FolderIcon className="w-6 h-6 mr-2" />
+                  Categories ({categories.length})
+                </h2>
+                <button
+                  onClick={() => setShowCategoryForm(!showCategoryForm)}
+                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center"
+                >
+                  <PlusIcon className="w-5 h-5 mr-1" />
+                  Add Category
+                </button>
+              </div>
+
+              {showCategoryForm && (
+                <form onSubmit={handleCreateCategory} className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <input
+                    type="text"
+                    placeholder="Category name"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg mb-2"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg mb-2"
+                  />
+                  <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
+                    Create Category
+                  </button>
+                </form>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categories.map(cat => (
+                  <div key={cat.id} className="p-4 border border-gray-200 rounded-lg">
+                    <h3 className="font-semibold text-gray-900">{cat.name}</h3>
+                    <p className="text-sm text-gray-600">{cat.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tags Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                  <TagIcon className="w-6 h-6 mr-2" />
+                  Tags ({tags.length})
+                </h2>
+                <button
+                  onClick={() => setShowTagForm(!showTagForm)}
+                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center"
+                >
+                  <PlusIcon className="w-5 h-5 mr-1" />
+                  Add Tag
+                </button>
+              </div>
+
+              {showTagForm && (
+                <form onSubmit={handleCreateTag} className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <input
+                    type="text"
+                    placeholder="Tag name"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg mb-2"
+                    required
+                  />
+                  <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
+                    Create Tag
+                  </button>
+                </form>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <span key={tag.id} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Documents Tab */}
+        {activeTab === 'documents' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">All Documents ({documents.length})</h2>
+            <div className="space-y-3">
+              {documents.map(doc => (
+                <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <div className="flex-1">
+                    <Link to={`/questions/${doc.id}`} className="font-semibold text-gray-900 hover:text-primary-600">
+                      {doc.title}
+                    </Link>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                      <span>by {doc.author_name || doc.author_username}</span>
+                      <span>•</span>
+                      <span>{doc.views_count || 0} views</span>
+                      <span>•</span>
+                      <span>{doc.comment_count || 0} answers</span>
+                      {doc.category_name && (
+                        <>
+                          <span>•</span>
+                          <span className="text-purple-600">{doc.category_name}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleTogglePublish(doc.id, doc.published)}
+                      className={`px-3 py-1 rounded text-sm font-medium ${
+                        doc.published
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {doc.published ? 'Published' : 'Unpublished'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDocument(doc.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Search & Click Logs Tab */}
+        {activeTab === 'search' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">
+                Live search_click_logs Table ({searchLogs.length} Records)
+              </h2>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => exportSearchLogs('csv')}
+                  className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  <ArrowDownTrayIcon className="w-5 h-5 mr-1" />
+                  Export CSV
+                </button>
+                <button
+                  onClick={() => exportSearchLogs('json')}
+                  className="flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                >
+                  <ArrowDownTrayIcon className="w-5 h-5 mr-1" />
+                  Export JSON
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Query String</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Clicked Doc ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {searchLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">log-{log.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {log.username ? (
+                          <span className="text-orange-600">usr-{log.user_id} (@{log.username})</span>
+                        ) : (
+                          <span className="text-gray-400">Anonymous</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{log.query_string}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {log.clicked_doc_id ? (
+                          <Link to={`/questions/${log.clicked_doc_id}`} className="text-teal-600 hover:underline">
+                            doc-{log.clicked_doc_id}
+                          </Link>
+                        ) : (
+                          <span className="text-gray-400">NULL (Search Only)</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.created_at}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
