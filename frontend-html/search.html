@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - Terracotta QnA</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .search-header {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 64px;
+            z-index: 100;
+        }
+        
+        .search-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .search-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        
+        .search-result {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-200);
+            transition: box-shadow 0.3s;
+        }
+        
+        .search-result:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .search-result h3 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .search-result h3 a {
+            color: var(--gray-900);
+            text-decoration: none;
+        }
+        
+        .search-result h3 a:hover {
+            color: var(--primary-600);
+        }
+        
+        .search-snippet {
+            color: var(--gray-600);
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        
+        .search-snippet mark {
+            background-color: #fef08a;
+            padding: 0 0.25rem;
+        }
+        
+        .search-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-card h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: start;
+        }
+        
+        .feature-list li::before {
+            content: "•";
+            color: var(--primary-600);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .popular-queries {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .popular-query {
+            padding: 0.5rem 1rem;
+            background: var(--gray-100);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 0.875rem;
+        }
+        
+        .popular-query:hover {
+            background: var(--primary-100);
+            color: var(--primary-700);
+        }
+        
+        .correction-suggestion {
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .correction-suggestion button {
+            background: none;
+            border: none;
+            color: var(--primary-600);
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="index.html" class="logo">
+                    <div class="logo-icon">T</div>
+                    <span class="logo-text">Terracotta <span class="logo-highlight">QnA</span></span>
+                </a>
+
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="directory.html">Directory</a>
+                    <a href="search.html">Search</a>
+                </div>
+
+                <div class="nav-actions" id="navActions"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search Header -->
+    <div class="search-header">
+        <div class="container search-container">
+            <form id="searchForm" class="search-form">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="search-input" 
+                    placeholder="Search questions using BM25 ranking..."
+                    style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem;"
+                >
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+            
+            <div id="correctionSuggestion"></div>
+            <div id="searchStats" class="search-stats"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container search-container">
+            <div id="searchResults">
+                <!-- Initial state - show features -->
+                <div class="feature-card">
+                    <h2>
+                        <svg class="icon" style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                        </svg>
+                        Advanced IR Search
+                    </h2>
+                    <p style="color: var(--gray-600); margin-bottom: 1rem;">
+                        Our search system uses state-of-the-art Information Retrieval techniques:
+                    </p>
+                    <ul class="feature-list">
+                        <li><strong>BM25 Ranking:</strong> Industry-standard probabilistic ranking function</li>
+                        <li><strong>Spell Correction:</strong> Automatic query correction using Levenshtein distance</li>
+                        <li><strong>Query-focused Snippets:</strong> Context-aware result previews</li>
+                        <li><strong>DAAT Processing:</strong> Document-at-a-time with priority queue</li>
+                        <li><strong>Delta Encoding:</strong> Compressed inverted index for fast retrieval</li>
+                    </ul>
+                </div>
+
+                <div id="popularQueriesSection"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        let currentQuery = '';
+        
+        async function performSearch(query) {
+            if (!query.trim()) return;
+            
+            currentQuery = query;
+            const resultsDiv = document.getElementById('searchResults');
+            const statsDiv = document.getElementById('searchStats');
+            const correctionDiv = document.getElementById('correctionSuggestion');
+            
+            // Show loading
+            resultsDiv.innerHTML = '<div class="loading-skeleton"><div class="skeleton-card"></div></div>';
+            statsDiv.innerHTML = '';
+            correctionDiv.innerHTML = '';
+            
+            try {
+                const data = await api.search(query, 20);
+                
+                // Show spell correction if available
+                if (data.corrected_query && data.corrected_query !== query) {
+                    correctionDiv.innerHTML = `
+                        <div class="correction-suggestion">
+                            <span style="color: var(--gray-600);">Did you mean: </span>
+                            <button onclick="performSearch('${escapeHtml(data.corrected_query)}')">${escapeHtml(data.corrected_query)}</button>
+                            ${data.corrections && data.corrections.length > 0 ? 
+                                `<span style="color: var(--gray-500); margin-left: 0.5rem;">(${data.corrections.map(c => c.original + '→' + c.corrected).join(', ')})</span>` 
+                                : ''}
+                        </div>
+                    `;
+                }
+                
+                // Show stats
+                statsDiv.innerHTML = `
+                    <span>${data.total_results} result${data.total_results !== 1 ? 's' : ''} found</span>
+                    <span>•</span>
+                    <span>${data.response_time_ms.toFixed(2)}ms</span>
+                    ${data.query_terms && data.query_terms.length > 0 ? `
+                        <span>•</span>
+                        <span>Query terms: ${data.query_terms.join(', ')}</span>
+                    ` : ''}
+                `;
+                
+                // Show results
+                if (data.results && data.results.length > 0) {
+                    resultsDiv.innerHTML = data.results.map((result, index) => `
+                        <div class="search-result">
+                            <h3><a href="question.html?id=${result.doc_id}" onclick="logClick(${result.doc_id}, ${index + 1})">${escapeHtml(result.title)}</a></h3>
+                            ${result.snippet ? `<div class="search-snippet">${result.snippet.replace(/\*\*(.*?)\*\*/g, '<mark>$1</mark>')}</div>` : ''}
+                            <div class="search-meta">
+                                <span><strong>Score:</strong> ${result.score.toFixed(4)}</span>
+                                <span>•</span>
+                                <span><strong>Rank:</strong> #${index + 1}</span>
+                                ${result.category ? `
+                                    <span>•</span>
+                                    <span class="category-badge">${escapeHtml(result.category)}</span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <h3>No results found</h3>
+                            <p>Try different keywords or check your spelling</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Search failed:', error);
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        Search failed. Please try again.
+                    </div>
+                `;
+            }
+        }
+        
+        async function logClick(docId, rank) {
+            try {
+                await api.logClick({
+                    query: currentQuery,
+                    doc_id: docId,
+                    rank: rank,
+                    clicked: true
+                });
+            } catch (error) {
+                console.error('Failed to log click:', error);
+            }
+        }
+        
+        async function loadPopularQueries() {
+            try {
+                const queries = await api.getPopularQueries(5);
+                if (queries && queries.length > 0) {
+                    document.getElementById('popularQueriesSection').innerHTML = `
+                        <div class="feature-card">
+                            <h2>
+                                <svg class="icon" style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                Popular Searches
+                            </h2>
+                            <div class="popular-queries">
+                                ${queries.map(q => `
+                                    <div class="popular-query" onclick="document.getElementById('searchInput').value='${escapeHtml(q.query)}'; document.getElementById('searchForm').dispatchEvent(new Event('submit'));">
+                                        ${escapeHtml(q.query)} <span style="color: var(--gray-500);">(${q.count})</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load popular queries:', error);
+            }
+        }
+        
+        // Handle form submission
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = document.getElementById('searchInput').value;
+            performSearch(query);
+        });
+        
+        // Check for query parameter
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlQuery = getUrlParameter('q');
+            if (urlQuery) {
+                document.getElementById('searchInput').value = urlQuery;
+                performSearch(urlQuery);
+            } else {
+                loadPopularQueries();
+            }
+        });
+    </script>
+</body>
+</html>

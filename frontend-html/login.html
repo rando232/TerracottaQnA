@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Terracotta QnA</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="index.html" class="logo">
+                    <div class="logo-icon">T</div>
+                    <span class="logo-text">Terracotta <span class="logo-highlight">QnA</span></span>
+                </a>
+
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="directory.html">Directory</a>
+                    <a href="search.html">Search</a>
+                </div>
+
+                <div class="nav-actions" id="navActions"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container" style="max-width: 400px;">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="logo-icon" style="width: 64px; height: 64px; font-size: 2rem; margin: 0 auto 1.5rem;">T</div>
+                    <h1 style="text-align: center; font-size: 1.875rem; margin-bottom: 0.5rem;">Sign in to your account</h1>
+                    <p style="text-align: center; color: var(--gray-600); margin-bottom: 2rem;">
+                        Or <a href="register.html" style="color: var(--primary-600); text-decoration: none;">create a new account</a>
+                    </p>
+                </div>
+
+                <div id="loginError"></div>
+
+                <form id="loginForm" style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="margin-bottom: 1rem;">
+                        <label for="username" style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Username</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            required
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem;"
+                            placeholder="Enter your username"
+                        >
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <label for="password" style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Password</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            required
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 1rem;"
+                            placeholder="Enter your password"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 1rem;">
+                        Sign in
+                    </button>
+
+                    <div style="text-align: center; margin-top: 1rem; font-size: 0.875rem; color: var(--gray-600);">
+                        Demo account: <code style="background: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px;">admin / admin123</code>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            try {
+                await auth.login(username, password);
+                window.location.href = 'index.html';
+            } catch (error) {
+                errorDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        Login failed. Please check your credentials.
+                    </div>
+                `;
+            }
+        });
+
+        // Redirect if already logged in
+        if (auth.isAuthenticated()) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

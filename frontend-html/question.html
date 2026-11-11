@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question - Terracotta QnA</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .question-detail {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .question-header {
+            margin-bottom: 1.5rem;
+        }
+        
+        .question-header h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .question-body {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .question-vote {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        
+        .question-vote .vote-btn svg {
+            width: 2rem;
+            height: 2rem;
+        }
+        
+        .question-vote .vote-count {
+            font-size: 1.5rem;
+        }
+        
+        .question-content-area {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .content-text {
+            line-height: 1.8;
+            color: var(--gray-800);
+            margin-bottom: 1.5rem;
+        }
+        
+        .content-text h1, .content-text h2, .content-text h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .content-text code {
+            background: var(--gray-100);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875em;
+            color: var(--red-600);
+        }
+        
+        .content-text pre {
+            background: var(--gray-900);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .content-text pre code {
+            background: transparent;
+            color: white;
+            padding: 0;
+        }
+        
+        .answers-section {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .answer-item {
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1.5rem 0;
+        }
+        
+        .answer-item:last-child {
+            border-bottom: none;
+        }
+        
+        .answer-form {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--gray-200);
+        }
+        
+        .answer-form textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+            min-height: 200px;
+        }
+        
+        .summary-box {
+            background: var(--gray-50);
+            border-left: 4px solid var(--primary-500);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="index.html" class="logo">
+                    <div class="logo-icon">T</div>
+                    <span class="logo-text">Terracotta <span class="logo-highlight">QnA</span></span>
+                </a>
+
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="directory.html">Directory</a>
+                    <a href="search.html">Search</a>
+                </div>
+
+                <div class="nav-actions" id="navActions"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container" style="max-width: 900px;">
+            <div id="questionDetail">
+                <!-- Loading -->
+                <div class="loading-skeleton">
+                    <div class="skeleton-card"></div>
+                </div>
+            </div>
+
+            <div id="answersSection" style="display: none;">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        let questionId = null;
+        
+        async function loadQuestion() {
+            questionId = getUrlParameter('id');
+            
+            if (!questionId) {
+                document.getElementById('questionDetail').innerHTML = `
+                    <div class="alert alert-error">Question not found</div>
+                `;
+                return;
+            }
+            
+            try {
+                const question = await api.getDocument(questionId);
+                
+                // Increment view count
+                api.incrementViews(questionId).catch(err => console.error('Failed to increment views:', err));
+                
+                const voteClass = question.vote_count > 0 ? 'positive' : question.vote_count < 0 ? 'negative' : '';
+                const tags = question.tags || [];
+                const tagsHTML = tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+                
+                document.getElementById('questionDetail').innerHTML = `
+                    <div class="question-detail">
+                        <div class="question-header">
+                            <h1>${escapeHtml(question.title)}</h1>
+                            <div class="question-meta">
+                                <span class="meta-item">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                    <a href="profile.html?username=${question.author_username}">
+                                        ${escapeHtml(question.author_name || question.author_username)}
+                                    </a>
+                                </span>
+                                <span class="meta-item">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    ${formatRelativeTime(question.created_at)}
+                                </span>
+                                <span class="meta-item">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                    ${question.views_count || 0} views
+                                </span>
+                                <span class="meta-item">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    </svg>
+                                    ${question.comment_count || 0} answers
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="question-body">
+                            <div class="question-vote">
+                                <button class="vote-btn" onclick="handleVote(${question.id}, 'document', 'upvote')">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                    </svg>
+                                </button>
+                                <span class="vote-count ${voteClass}">${question.vote_count || 0}</span>
+                                <button class="vote-btn" onclick="handleVote(${question.id}, 'document', 'downvote')">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div class="question-content-area">
+                                <div style="margin-bottom: 1.5rem;">
+                                    ${question.category_name ? `<span class="category-badge">${escapeHtml(question.category_name)}</span>` : ''}
+                                    ${tagsHTML ? `<div class="question-tags" style="display: inline-block; margin-left: 0.5rem;">${tagsHTML}</div>` : ''}
+                                </div>
+                                
+                                ${question.summary ? `
+                                    <div class="summary-box">
+                                        ${escapeHtml(question.summary)}
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="content-text">
+                                    ${markdownToHtml(question.content)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.title = question.title + ' - Terracotta QnA';
+                
+                // Load answers
+                loadAnswers();
+                
+            } catch (error) {
+                console.error('Failed to load question:', error);
+                document.getElementById('questionDetail').innerHTML = `
+                    <div class="alert alert-error">Failed to load question. Please try again.</div>
+                `;
+            }
+        }
+        
+        async function loadAnswers() {
+            const answersDiv = document.getElementById('answersSection');
+            answersDiv.style.display = 'block';
+            
+            try {
+                const comments = await api.getComments(questionId);
+                
+                answersDiv.innerHTML = `
+                    <div class="answers-section">
+                        <h2 style="margin-bottom: 1.5rem;">${comments.length} ${comments.length === 1 ? 'Answer' : 'Answers'}</h2>
+                        
+                        ${comments.length > 0 ? comments.map(comment => {
+                            const voteClass = comment.vote_count > 0 ? 'positive' : comment.vote_count < 0 ? 'negative' : '';
+                            return `
+                                <div class="answer-item">
+                                    <div class="question-body">
+                                        <div class="question-vote">
+                                            <button class="vote-btn" onclick="handleVote(${comment.id}, 'comment', 'upvote')">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                </svg>
+                                            </button>
+                                            <span class="vote-count ${voteClass}">${comment.vote_count || 0}</span>
+                                            <button class="vote-btn" onclick="handleVote(${comment.id}, 'comment', 'downvote')">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        
+                                        <div style="flex: 1;">
+                                            <div class="content-text">
+                                                ${markdownToHtml(comment.content)}
+                                            </div>
+                                            <div class="question-meta">
+                                                <span class="meta-item">
+                                                    <a href="profile.html?username=${comment.author_username}">
+                                                        ${escapeHtml(comment.author_name || comment.author_username)}
+                                                    </a>
+                                                </span>
+                                                <span class="meta-item">
+                                                    ${formatRelativeTime(comment.created_at)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') : ''}
+                        
+                        ${auth.isAuthenticated() ? `
+                            <div class="answer-form">
+                                <h3 style="margin-bottom: 1rem;">Your Answer</h3>
+                                <form id="answerForm">
+                                    <textarea 
+                                        id="answerContent" 
+                                        placeholder="Write your answer here... (Markdown supported)"
+                                        required
+                                    ></textarea>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                                        <p style="font-size: 0.875rem; color: var(--gray-500);">You can use Markdown for formatting</p>
+                                        <button type="submit" class="btn btn-primary">Post Answer</button>
+                                    </div>
+                                </form>
+                            </div>
+                        ` : `
+                            <div class="answer-form" style="text-align: center; padding: 2rem; background: var(--gray-50); border-radius: 8px;">
+                                <p style="color: var(--gray-600); margin-bottom: 1rem;">Please login to answer this question</p>
+                                <a href="login.html" class="btn btn-primary">Login</a>
+                            </div>
+                        `}
+                    </div>
+                `;
+                
+                // Setup answer form if user is authenticated
+                if (auth.isAuthenticated()) {
+                    document.getElementById('answerForm').addEventListener('submit', submitAnswer);
+                }
+                
+            } catch (error) {
+                console.error('Failed to load answers:', error);
+            }
+        }
+        
+        async function submitAnswer(e) {
+            e.preventDefault();
+            
+            const content = document.getElementById('answerContent').value.trim();
+            if (!content) return;
+            
+            try {
+                await api.createComment({
+                    document_id: parseInt(questionId),
+                    content: content
+                });
+                
+                // Reload answers
+                loadAnswers();
+                
+                // Reload question to update answer count
+                loadQuestion();
+                
+            } catch (error) {
+                console.error('Failed to post answer:', error);
+                showAlert('Failed to post answer. Please try again.', 'error');
+            }
+        }
+        
+        // Load question on page load
+        document.addEventListener('DOMContentLoaded', loadQuestion);
+    </script>
+</body>
+</html>

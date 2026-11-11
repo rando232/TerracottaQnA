@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terracotta QnA - Information Retrieval Community</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="index.html" class="logo">
+                    <div class="logo-icon">T</div>
+                    <span class="logo-text">Terracotta <span class="logo-highlight">QnA</span></span>
+                </a>
+
+                <div class="nav-links" id="navLinks">
+                    <a href="index.html">Home</a>
+                    <a href="directory.html">Directory</a>
+                    <a href="search.html">Search</a>
+                </div>
+
+                <div class="nav-actions" id="navActions">
+                    <!-- Will be populated by JavaScript based on auth state -->
+                </div>
+
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">Welcome to Terracotta QnA</h1>
+            <p class="hero-subtitle">A community-driven platform for Information Retrieval and Search Engineering</p>
+            
+            <div class="search-bar-hero">
+                <input type="text" id="heroSearch" placeholder="Search for questions..." class="search-input">
+                <button onclick="performHeroSearch()" class="btn btn-primary">Search</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="statsQuestions">0</div>
+                    <div class="stat-label">Questions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="statsAnswers">0</div>
+                    <div class="stat-label">Answers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="statsMembers">50+</div>
+                    <div class="stat-label">Members</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Sort Tabs -->
+            <div class="sort-tabs">
+                <button class="sort-tab active" data-sort="created_at">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Latest
+                </button>
+                <button class="sort-tab" data-sort="vote_count">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path>
+                    </svg>
+                    Top Voted
+                </button>
+                <button class="sort-tab" data-sort="views_count">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                    Most Viewed
+                </button>
+
+                <a href="directory.html" class="view-all-link">View All →</a>
+            </div>
+
+            <!-- Questions List -->
+            <div id="questionsList" class="questions-list">
+                <!-- Loading skeleton -->
+                <div class="loading-skeleton">
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h3>Terracotta QnA</h3>
+                    <p>A community-driven platform for Information Retrieval and Search Engineering discussions.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Features</h3>
+                    <ul>
+                        <li>BM25 Search Ranking</li>
+                        <li>Spell Correction</li>
+                        <li>Query-focused Snippets</li>
+                        <li>Community Voting</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="directory.html">Directory</a></li>
+                        <li><a href="search.html">Search</a></li>
+                        <li><a href="ask.html">Ask Question</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <span id="currentYear"></span> Terracotta QnA. Built with HTML, CSS & JavaScript.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/home.js"></script>
+</body>
+</html>
