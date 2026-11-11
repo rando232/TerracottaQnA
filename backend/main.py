@@ -669,6 +669,57 @@ def get_stats():
     return stats
 
 # ============================================================================
+# DATABASE VIEWER (Admin Only)
+# ============================================================================
+
+@app.get("/api/admin/database")
+def get_database_contents(current_user: dict = Depends(get_current_user)):
+    """Get all database tables and their contents (admin only)"""
+    
+    if current_user['role'] not in ['super_admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        # List of tables to query
+        tables = [
+            'users',
+            'documents',
+            'comments',
+            'categories',
+            'tags',
+            'document_tags',
+            'votes',
+            'search_queries'
+        ]
+        
+        database_data = {}
+        
+        for table in tables:
+            try:
+                # Get table data
+                rows = execute_query(f"SELECT * FROM {table}", fetch_all=True)
+                
+                # Get row count
+                count_result = execute_query(f"SELECT COUNT(*) as count FROM {table}", fetch_one=True)
+                count = count_result['count'] if count_result else 0
+                
+                database_data[table] = {
+                    'count': count,
+                    'rows': rows if rows else []
+                }
+            except Exception as e:
+                database_data[table] = {
+                    'error': str(e),
+                    'count': 0,
+                    'rows': []
+                }
+        
+        return database_data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+# ============================================================================
 # ROOT ENDPOINT
 # ============================================================================
 

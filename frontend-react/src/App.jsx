@@ -10,6 +10,7 @@ import AskQuestion from './pages/AskQuestion';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Database from './pages/Database';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/ask" element={<AskQuestion />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/:username" element={<Profile />} />
+            <Route path="/database" element={<Database />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="*" element={<Navigate to="/" replace />} />

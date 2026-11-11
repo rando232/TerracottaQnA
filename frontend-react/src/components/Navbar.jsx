@@ -6,7 +6,8 @@ import {
   ArrowRightOnRectangleIcon,
   PlusIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  CircleStackIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -49,6 +50,15 @@ const Navbar = () => {
               <MagnifyingGlassIcon className="w-5 h-5" />
               <span>Search</span>
             </Link>
+            {user?.role === 'super_admin' && (
+              <Link 
+                to="/database" 
+                className="text-gray-700 hover:text-primary-600 font-medium transition-colors flex items-center space-x-1"
+              >
+                <CircleStackIcon className="w-5 h-5" />
+                <span>Database</span>
+              </Link>
+            )}
           </div>
 
           {/* Right side buttons */}
@@ -144,6 +154,16 @@ const Navbar = () => {
             >
               Search
             </Link>
+            
+            {user?.role === 'super_admin' && (
+              <Link 
+                to="/database" 
+                className="block text-gray-700 hover:text-primary-600 font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Database
+              </Link>
+            )}
             
             <div className="border-t border-gray-200 pt-3 mt-3">
               {isAuthenticated ? (
