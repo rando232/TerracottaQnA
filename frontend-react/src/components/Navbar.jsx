@@ -7,7 +7,8 @@ import {
   PlusIcon,
   Bars3Icon,
   XMarkIcon,
-  CircleStackIcon
+  CircleStackIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -50,13 +51,13 @@ const Navbar = () => {
               <MagnifyingGlassIcon className="w-5 h-5" />
               <span>Search</span>
             </Link>
-            {user?.role === 'super_admin' && (
+            {user && ['super_admin', 'content_manager', 'moderator', 'data_seo_specialist'].includes(user.role) && (
               <Link 
-                to="/database" 
+                to="/admin" 
                 className="text-gray-700 hover:text-primary-600 font-medium transition-colors flex items-center space-x-1"
               >
-                <CircleStackIcon className="w-5 h-5" />
-                <span>Database</span>
+                <ShieldCheckIcon className="w-5 h-5" />
+                <span>Admin</span>
               </Link>
             )}
           </div>
@@ -155,13 +156,13 @@ const Navbar = () => {
               Search
             </Link>
             
-            {user?.role === 'super_admin' && (
+            {user && ['super_admin', 'content_manager', 'moderator', 'data_seo_specialist'].includes(user.role) && (
               <Link 
-                to="/database" 
+                to="/admin" 
                 className="block text-gray-700 hover:text-primary-600 font-medium"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Database
+                Admin
               </Link>
             )}
             

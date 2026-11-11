@@ -11,6 +11,11 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Database from './pages/Database';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import ContentManagement from './pages/admin/ContentManagement';
+import Moderation from './pages/admin/Moderation';
+import SEOAnalytics from './pages/admin/SEOAnalytics';
 
 function App() {
   return (
@@ -26,6 +31,11 @@ function App() {
             <Route path="/ask" element={<AskQuestion />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/:username" element={<Profile />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/admin/content" element={<ContentManagement />} />
+            <Route path="/admin/moderation" element={<Moderation />} />
+            <Route path="/admin/seo" element={<SEOAnalytics />} />
             <Route path="/database" element={<Database />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

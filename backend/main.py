@@ -720,6 +720,168 @@ def get_database_contents(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 # ============================================================================
+# USER MANAGEMENT (Super Admin Only)
+# ============================================================================
+
+@app.get("/api/admin/users")
+def get_all_users(current_user: dict = Depends(get_current_user)):
+    """Get all users (super admin only)"""
+    
+    if current_user['role'] != 'super_admin':
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    users = execute_query("SELECT * FROM users ORDER BY created_at DESC", fetch_all=True)
+    return users
+
+@app.put("/api/admin/users/{user_id}/role")
+def update_user_role(user_id: int, role_data: dict, current_user: dict = Depends(get_current_user)):
+    """Update user role (super admin only)"""
+    
+    if current_user['role'] != 'super_admin':
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    valid_roles = ['user', 'moderator', 'content_manager', 'data_seo_specialist', 'super_admin']
+    new_role = role_data.get('role')
+    
+    if new_role not in valid_roles:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    execute_query("UPDATE users SET role = %s WHERE id = %s", (new_role, user_id))
+    return {"message": "Role updated successfully"}
+
+@app.delete("/api/admin/users/{user_id}")
+def delete_user(user_id: int, current_user: dict = Depends(get_current_user)):
+    """Delete user (super admin only)"""
+    
+    if current_user['role'] != 'super_admin':
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    if user_id == current_user['id']:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    execute_query("DELETE FROM users WHERE id = %s", (user_id,))
+    return {"message": "User deleted successfully"}
+
+# ============================================================================
+# CONTENT MANAGEMENT
+# ============================================================================
+
+@app.get("/api/admin/content")
+def get_all_content(current_user: dict = Depends(get_current_user)):
+    """Get all documents for content management"""
+    
+    if current_user['role'] not in ['content_manager', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Content manager access required")
+    
+    documents = execute_query(
+        """SELECT d.*, u.name as author_name, u.username as author_username,
+           c.name as category_name
+           FROM documents d
+           LEFT JOIN users u ON d.author_id = u.id
+           LEFT JOIN categories c ON d.category_id = c.id
+           ORDER BY d.created_at DESC""",
+        fetch_all=True
+    )
+    return documents
+
+@app.put("/api/admin/content/{document_id}/status")
+def update_document_status(document_id: int, status_data: dict, current_user: dict = Depends(get_current_user)):
+    """Update document publication status"""
+    
+    if current_user['role'] not in ['content_manager', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Content manager access required")
+    
+    published = status_data.get('published', True)
+    execute_query("UPDATE documents SET published = %s WHERE id = %s", (published, document_id))
+    return {"message": "Status updated successfully"}
+
+# ============================================================================
+# MODERATION
+# ============================================================================
+
+@app.get("/api/admin/moderation")
+def get_moderation_data(current_user: dict = Depends(get_current_user)):
+    """Get data for moderation dashboard"""
+    
+    if current_user['role'] not in ['moderator', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Moderator access required")
+    
+    # Get recent comments
+    comments = execute_query(
+        """SELECT c.*, u.name as author_name, u.username as author_username
+           FROM comments c
+           JOIN users u ON c.author_id = u.id
+           ORDER BY c.created_at DESC
+           LIMIT 50""",
+        fetch_all=True
+    )
+    
+    return {
+        "recent_comments": comments,
+        "flagged_content": []  # Placeholder for flagged content feature
+    }
+
+@app.put("/api/admin/comments/{comment_id}/approve")
+def approve_comment(comment_id: int, current_user: dict = Depends(get_current_user)):
+    """Approve a comment"""
+    
+    if current_user['role'] not in ['moderator', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Moderator access required")
+    
+    # For now, just mark as reviewed (you can add an 'approved' column to the schema)
+    return {"message": "Comment approved"}
+
+# ============================================================================
+# SEO & ANALYTICS
+# ============================================================================
+
+@app.get("/api/admin/seo/documents")
+def get_documents_for_seo(current_user: dict = Depends(get_current_user)):
+    """Get all documents with SEO metadata"""
+    
+    if current_user['role'] not in ['data_seo_specialist', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Data & SEO Specialist access required")
+    
+    documents = execute_query(
+        """SELECT id, title, views_count, 
+           '' as meta_title, '' as meta_description, 
+           '' as meta_keywords, '' as alt_text
+           FROM documents
+           ORDER BY views_count DESC""",
+        fetch_all=True
+    )
+    return documents
+
+@app.put("/api/admin/seo/documents/{document_id}")
+def update_document_seo(document_id: int, seo_data: dict, current_user: dict = Depends(get_current_user)):
+    """Update document SEO metadata"""
+    
+    if current_user['role'] not in ['data_seo_specialist', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Data & SEO Specialist access required")
+    
+    # For now, return success (you can add SEO columns to documents table)
+    return {"message": "SEO metadata updated successfully"}
+
+@app.get("/api/admin/analytics")
+def get_analytics(current_user: dict = Depends(get_current_user)):
+    """Get analytics data"""
+    
+    if current_user['role'] not in ['data_seo_specialist', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Data & SEO Specialist access required")
+    
+    total_documents = execute_query("SELECT COUNT(*) as count FROM documents", fetch_one=True)
+    total_views = execute_query("SELECT SUM(views_count) as total FROM documents", fetch_one=True)
+    total_searches = execute_query("SELECT COUNT(*) as count FROM search_queries", fetch_one=True)
+    avg_views = execute_query("SELECT AVG(views_count) as avg FROM documents", fetch_one=True)
+    
+    return {
+        "total_documents": total_documents['count'] if total_documents else 0,
+        "total_views": total_views['total'] if total_views and total_views['total'] else 0,
+        "total_searches": total_searches['count'] if total_searches else 0,
+        "avg_views": round(avg_views['avg'], 2) if avg_views and avg_views['avg'] else 0
+    }
+
+# ============================================================================
 # ROOT ENDPOINT
 # ============================================================================
 
