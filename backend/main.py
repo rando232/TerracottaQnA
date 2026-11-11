@@ -934,10 +934,12 @@ def update_document_status(document_id: int, status_data: dict, current_user: di
     if current_user['role'] not in ['content_manager', 'super_admin']:
         raise HTTPException(status_code=403, detail="Content manager access required")
     
+    # The frontend sends 'published' boolean, convert to status enum
     published = status_data.get('published', True)
-    # Remove the published field update since it doesn't exist in the schema
-    # execute_query("UPDATE documents SET published = %s WHERE id = %s", (published, document_id))
-    return {"message": "Status updated successfully"}
+    status = 'published' if published else 'unpublished'
+    
+    execute_query("UPDATE documents SET status = %s WHERE id = %s", (status, document_id))
+    return {"message": "Status updated successfully", "status": status}
 
 # ============================================================================
 # MODERATION
