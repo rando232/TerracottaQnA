@@ -946,10 +946,11 @@ export default function App() {
     localStorage.setItem('nexusqa_platformSettings', JSON.stringify(platformSettings));
   }, [platformSettings]);
 
-  // Navigation & View State: 'directory' | 'detail' | 'admin' | 'architecture' | 'auth' | 'profile'
+  // Navigation & View State: 'directory' | 'detail' | 'admin' | 'architecture' | 'auth' | 'profile' | 'database'
   const [activeView, setActiveView] = useState('directory');
   const [selectedDocId, setSelectedDocId] = useState('doc-1001');
   const [activeAdminTab, setActiveAdminTab] = useState('super_admin');
+  const [selectedDbTable, setSelectedDbTable] = useState('documents');
 
   // Dedicated Auth Page State ('login' | 'register')
   const [authMode, setAuthMode] = useState('login');
@@ -1890,9 +1891,11 @@ export default function App() {
               onClick={() => setActiveView('directory')}
               className="flex items-center gap-2.5 text-left group"
             >
-              <div className="w-10 h-10 rounded-xl bg-terracotta-600 flex items-center justify-center text-white shadow-sm group-hover:bg-terracotta-700 transition-colors">
-                <Layers className="w-5 h-5" />
-              </div>
+              <img 
+                src="/logo.png" 
+                alt="Terracotta QnA Logo" 
+                className="w-10 h-10 rounded-xl shadow-sm group-hover:scale-105 transition-transform"
+              />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-lg tracking-tight text-slate-900">
@@ -1941,6 +1944,18 @@ export default function App() {
                   {flaggedDocs.length + flaggedComments.length}
                 </span>
               )}
+            </button>
+
+            <button
+              onClick={() => setActiveView('database')}
+              className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                activeView === 'database'
+                  ? 'bg-terracotta-50 text-terracotta-700 font-semibold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Database className="w-4 h-4" />
+              <span>Database</span>
             </button>
 
             <button
@@ -2830,6 +2845,88 @@ export default function App() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ==================================================================
+            VIEW 0C: DATABASE VIEWER (`activeView === 'database'`)
+           ================================================================== */}
+        {activeView === 'database' && (
+          <div className="space-y-6">
+            <div className="bg-orange-50 rounded-2xl border border-slate-200 p-6 shadow-xs">
+              <div className="flex items-center gap-3 mb-6">
+                <Database className="w-6 h-6 text-terracotta-600" />
+                <div>
+                  <h1 className="text-lg font-bold text-slate-900">Database Inspector</h1>
+                  <p className="text-xs text-slate-500">View all data tables and their contents in plain text/JSON format</p>
+                </div>
+              </div>
+
+              {/* Table Selector */}
+              <div className="flex gap-2 mb-6 flex-wrap">
+                {['documents', 'users', 'categories', 'tags', 'searchLogs', 'systemLogs'].map(table => (
+                  <button
+                    key={table}
+                    onClick={() => setSelectedDbTable(table)}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      selectedDbTable === table
+                        ? 'bg-terracotta-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {table.charAt(0).toUpperCase() + table.slice(1)} ({
+                      table === 'documents' ? documents.length :
+                      table === 'users' ? users.length :
+                      table === 'categories' ? categories.length :
+                      table === 'tags' ? tags.length :
+                      table === 'searchLogs' ? searchLogs.length :
+                      systemLogs.length
+                    })
+                  </button>
+                ))}
+              </div>
+
+              {/* Data Display */}
+              <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto">
+                <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
+                  {selectedDbTable === 'documents' && JSON.stringify(documents, null, 2)}
+                  {selectedDbTable === 'users' && JSON.stringify(users, null, 2)}
+                  {selectedDbTable === 'categories' && JSON.stringify(categories, null, 2)}
+                  {selectedDbTable === 'tags' && JSON.stringify(tags, null, 2)}
+                  {selectedDbTable === 'searchLogs' && JSON.stringify(searchLogs, null, 2)}
+                  {selectedDbTable === 'systemLogs' && JSON.stringify(systemLogs, null, 2)}
+                </pre>
+              </div>
+
+              {/* Export Button */}
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => {
+                    const data = 
+                      selectedDbTable === 'documents' ? documents :
+                      selectedDbTable === 'users' ? users :
+                      selectedDbTable === 'categories' ? categories :
+                      selectedDbTable === 'tags' ? tags :
+                      selectedDbTable === 'searchLogs' ? searchLogs :
+                      systemLogs;
+                    
+                    const dataStr = JSON.stringify(data, null, 2);
+                    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(dataBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${selectedDbTable}_${Date.now()}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    notify(`Exported ${selectedDbTable} as JSON`);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-terracotta-600 hover:bg-terracotta-700 text-white text-xs font-semibold flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Export {selectedDbTable.charAt(0).toUpperCase() + selectedDbTable.slice(1)} as JSON
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
