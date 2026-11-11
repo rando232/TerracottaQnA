@@ -1015,13 +1015,19 @@ def get_analytics(current_user: dict = Depends(get_current_user)):
     
     total_documents = execute_query("SELECT COUNT(*) as count FROM documents", fetch_one=True)
     total_views = execute_query("SELECT SUM(views_count) as total FROM documents", fetch_one=True)
-    total_searches = execute_query("SELECT COUNT(*) as count FROM search_queries", fetch_one=True)
     avg_views = execute_query("SELECT AVG(views_count) as avg FROM documents", fetch_one=True)
+    
+    # Try to get search count, handle if table doesn't exist
+    try:
+        total_searches = execute_query("SELECT COUNT(*) as count FROM search_queries", fetch_one=True)
+        search_count = total_searches['count'] if total_searches else 0
+    except:
+        search_count = 0
     
     return {
         "total_documents": total_documents['count'] if total_documents else 0,
         "total_views": total_views['total'] if total_views and total_views['total'] else 0,
-        "total_searches": total_searches['count'] if total_searches else 0,
+        "total_searches": search_count,
         "avg_views": round(avg_views['avg'], 2) if avg_views and avg_views['avg'] else 0
     }
 
