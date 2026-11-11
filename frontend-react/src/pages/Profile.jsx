@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   UserCircleIcon,
   EnvelopeIcon,
@@ -12,13 +12,16 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { documentsAPI, commentsAPI } from '../api';
+import axios from 'axios';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, updateProfile } = useAuth();
+  const { username } = useParams(); // Get username from URL
+  const { user: currentUser, isAuthenticated, updateProfile } = useAuth();
   
+  const [profileUser, setProfileUser] = useState(null); // User whose profile we're viewing
   const [editing, setEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [userQuestions, setUserQuestions] = useState([]);
   const [userComments, setUserComments] = useState([]);
@@ -30,27 +33,57 @@ const Profile = () => {
     bio: ''
   });
 
+  // Determine if viewing own profile
+  const isOwnProfile = !username || (currentUser && currentUser.username === username);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
 
-    if (user) {
-      setFormData({
-        name: user.name || '',
-        email: user.email || '',
-        bio: user.bio || ''
-      });
-      loadUserContent();
-    }
-  }, [isAuthenticated, user, navigate]);
+    loadProfile();
+  }, [isAuthenticated, username, currentUser, navigate]);
 
-  const loadUserContent = async () => {
+  const loadProfile = async () => {
+    setLoading(true);
+    try {
+      let userToLoad;
+      
+      if (isOwnProfile) {
+        // Viewing own profile - use current user
+        userToLoad = currentUser;
+      } else {
+        // Viewing someone else's profile - fetch their data
+        const response = await axios.get(`http://localhost:8000/api/users/${username}`);
+        userToLoad = response.data;
+      }
+
+      setProfileUser(userToLoad);
+      
+      if (isOwnProfile) {
+        setFormData({
+          name: userToLoad.name || '',
+          email: userToLoad.email || '',
+          bio: userToLoad.bio || ''
+        });
+      }
+      
+      await loadUserContent(userToLoad.id);
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+      alert('User not found');
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserContent = async (userId) => {
     try {
       // Load user's questions
       const questionsResponse = await documentsAPI.getAll({
-        author_id: user.id,
+        author_id: userId,
         limit: 50
       });
       setUserQuestions(questionsResponse.data);
@@ -135,11 +168,21 @@ const Profile = () => {
     }
   };
 
-  if (!user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profileUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">User not found</p>
         </div>
       </div>
     );
@@ -160,68 +203,70 @@ const Profile = () => {
             <div className="flex items-center space-x-6">
               {/* Avatar */}
               <div className="relative group">
-                {user.avatar_url ? (
+                {profileUser.avatar_url ? (
                   <img
-                    src={`http://localhost:8000${user.avatar_url}`}
-                    alt={user.name || user.username}
+                    src={`http://localhost:8000${profileUser.avatar_url}`}
+                    alt={profileUser.name || profileUser.username}
                     className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                   />
                 ) : (
                   <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center shadow-lg">
                     <span className="text-white font-bold text-4xl">
-                      {user.name ? user.name[0].toUpperCase() : user.username[0].toUpperCase()}
+                      {profileUser.name ? profileUser.name[0].toUpperCase() : profileUser.username[0].toUpperCase()}
                     </span>
                   </div>
                 )}
                 
-                {/* Upload button overlay */}
-                <label
-                  htmlFor="avatar-upload"
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 rounded-full cursor-pointer transition-all"
-                >
-                  <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleAvatarUpload}
-                    disabled={uploadingAvatar}
-                    className="hidden"
-                  />
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity text-center">
-                    {uploadingAvatar ? (
-                      <div className="text-white text-sm font-medium">Uploading...</div>
-                    ) : (
-                      <>
-                        <CameraIcon className="w-8 h-8 text-white mx-auto mb-1" />
-                        <div className="text-white text-xs font-medium">Change Photo</div>
-                      </>
-                    )}
-                  </div>
-                </label>
+                {/* Upload button overlay - only show on own profile */}
+                {isOwnProfile && (
+                  <label
+                    htmlFor="avatar-upload"
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 rounded-full cursor-pointer transition-all"
+                  >
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
+                      className="hidden"
+                    />
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                      {uploadingAvatar ? (
+                        <div className="text-white text-sm font-medium">Uploading...</div>
+                      ) : (
+                        <>
+                          <CameraIcon className="w-8 h-8 text-white mx-auto mb-1" />
+                          <div className="text-white text-xs font-medium">Change Photo</div>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                )}
               </div>
 
               {/* User info */}
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {user.name || user.username}
+                  {profileUser.name || profileUser.username}
                 </h1>
-                <p className="text-gray-600 mb-1">@{user.username}</p>
+                <p className="text-gray-600 mb-1">@{profileUser.username}</p>
                 <div className="flex items-center space-x-4 text-sm text-gray-500">
                   <span className="flex items-center space-x-1">
                     <EnvelopeIcon className="w-4 h-4" />
-                    <span>{user.email}</span>
+                    <span>{profileUser.email}</span>
                   </span>
-                  {user.role && (
+                  {profileUser.role && (
                     <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium">
-                      {user.role}
+                      {profileUser.role}
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Edit button */}
-            {!editing && (
+            {/* Edit button - only show on own profile */}
+            {!editing && isOwnProfile && (
               <button
                 onClick={() => setEditing(true)}
                 className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
@@ -233,7 +278,7 @@ const Profile = () => {
           </div>
 
           {/* Bio or Edit Form */}
-          {editing ? (
+          {editing && isOwnProfile ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -291,9 +336,9 @@ const Profile = () => {
                   onClick={() => {
                     setEditing(false);
                     setFormData({
-                      name: user.name || '',
-                      email: user.email || '',
-                      bio: user.bio || ''
+                      name: profileUser.name || '',
+                      email: profileUser.email || '',
+                      bio: profileUser.bio || ''
                     });
                   }}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
@@ -304,8 +349,8 @@ const Profile = () => {
             </form>
           ) : (
             <div>
-              {user.bio ? (
-                <p className="text-gray-700">{user.bio}</p>
+              {profileUser.bio ? (
+                <p className="text-gray-700">{profileUser.bio}</p>
               ) : (
                 <p className="text-gray-400 italic">No bio yet</p>
               )}

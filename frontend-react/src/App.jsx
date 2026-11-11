@@ -24,6 +24,7 @@ function App() {
             <Route path="/search" element={<Search />} />
             <Route path="/ask" element={<AskQuestion />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/users/:username" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="*" element={<Navigate to="/" replace />} />

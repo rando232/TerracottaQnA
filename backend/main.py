@@ -200,12 +200,12 @@ def get_me(current_user: dict = Depends(get_current_user)):
 # USER ROUTES
 # ============================================================================
 
-@app.get("/api/users/{user_id}", response_model=UserResponse)
-def get_user(user_id: int):
-    """Get user by ID"""
+@app.get("/api/users/{username}", response_model=UserResponse)
+def get_user(username: str):
+    """Get user by username"""
     user = execute_query(
-        "SELECT * FROM users WHERE id = %s",
-        (user_id,),
+        "SELECT * FROM users WHERE username = %s",
+        (username,),
         fetch_one=True
     )
     
