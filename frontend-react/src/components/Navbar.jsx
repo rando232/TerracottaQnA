@@ -60,6 +60,15 @@ const Navbar = () => {
                 <span>Admin</span>
               </Link>
             )}
+            {user?.role === 'super_admin' && (
+              <Link 
+                to="/database" 
+                className="text-gray-700 hover:text-primary-600 font-medium transition-colors flex items-center space-x-1"
+              >
+                <CircleStackIcon className="w-5 h-5" />
+                <span>Database</span>
+              </Link>
+            )}
           </div>
 
           {/* Right side buttons */}
@@ -163,6 +172,16 @@ const Navbar = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Admin
+              </Link>
+            )}
+            
+            {user?.role === 'super_admin' && (
+              <Link 
+                to="/database" 
+                className="block text-gray-700 hover:text-primary-600 font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Database
               </Link>
             )}
             

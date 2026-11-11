@@ -12,7 +12,8 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     name: '',
-    bio: ''
+    bio: '',
+    role: 'user'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -173,6 +174,29 @@ const Register = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                 placeholder="Tell us about yourself..."
               />
+            </div>
+
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                Role *
+              </label>
+              <select
+                id="role"
+                name="role"
+                required
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="user">User</option>
+                <option value="moderator">Moderator</option>
+                <option value="content_manager">Content Manager</option>
+                <option value="data_seo_specialist">Data & SEO Specialist</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Select the role that best fits your intended use
+              </p>
             </div>
           </div>
 

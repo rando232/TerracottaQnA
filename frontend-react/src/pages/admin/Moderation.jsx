@@ -6,7 +6,7 @@ import {
   XCircleIcon,
   ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 

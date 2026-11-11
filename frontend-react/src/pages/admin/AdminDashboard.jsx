@@ -8,7 +8,7 @@ import {
   CircleStackIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();

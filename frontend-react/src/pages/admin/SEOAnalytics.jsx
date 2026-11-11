@@ -6,7 +6,7 @@ import {
   DocumentTextIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 
 const SEOAnalytics = () => {
