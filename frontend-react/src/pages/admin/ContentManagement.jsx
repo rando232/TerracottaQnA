@@ -31,6 +31,13 @@ const ContentManagement = () => {
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [newTag, setNewTag] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [filters, setFilters] = useState({
+    search: '',
+    category: '',
+    tag: '',
+    dateFrom: '',
+    dateTo: ''
+  });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -146,6 +153,48 @@ const ContentManagement = () => {
   const exportSearchLogs = (format) => {
     const token = localStorage.getItem('token');
     window.open(`http://localhost:8000/api/admin/content/search-logs/export?format=${format}&token=${token}`, '_blank');
+  };
+
+  // Filter documents based on search and filters
+  const filteredDocuments = documents.filter(doc => {
+    // Search filter (title and content)
+    if (filters.search && !doc.title.toLowerCase().includes(filters.search.toLowerCase())) {
+      return false;
+    }
+    
+    // Category filter
+    if (filters.category && doc.category_id !== parseInt(filters.category)) {
+      return false;
+    }
+    
+    // Tag filter (assuming doc has tags field)
+    if (filters.tag && !doc.tags?.includes(filters.tag)) {
+      return false;
+    }
+    
+    // Date range filter
+    if (filters.dateFrom && new Date(doc.created_at) < new Date(filters.dateFrom)) {
+      return false;
+    }
+    if (filters.dateTo && new Date(doc.created_at) > new Date(filters.dateTo)) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      category: '',
+      tag: '',
+      dateFrom: '',
+      dateTo: ''
+    });
   };
 
   if (loading) {
@@ -390,48 +439,137 @@ const ContentManagement = () => {
         {/* Documents Tab */}
         {activeTab === 'documents' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">All Documents ({documents.length})</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">All Documents ({filteredDocuments.length} of {documents.length})</h2>
+            
+            {/* Filters Section */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Search Box */}
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Search by title..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Category Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={filters.category}
+                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tag Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tag</label>
+                  <select
+                    value={filters.tag}
+                    onChange={(e) => handleFilterChange('tag', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">All Tags</option>
+                    {tags.map(tag => (
+                      <option key={tag.id} value={tag.name}>{tag.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Clear Filters Button */}
+                <div className="flex items-end">
+                  <button
+                    onClick={clearFilters}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700 font-medium"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+
+              {/* Date Range Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+                  <input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+                  <input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Documents List */}
             <div className="space-y-3">
-              {documents.map(doc => (
-                <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <div className="flex-1">
-                    <Link to={`/questions/${doc.id}`} className="font-semibold text-gray-900 hover:text-primary-600">
-                      {doc.title}
-                    </Link>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                      <span>by {doc.author_name || doc.author_username}</span>
-                      <span>•</span>
-                      <span>{doc.views_count || 0} views</span>
-                      <span>•</span>
-                      <span>{doc.comment_count || 0} answers</span>
-                      {doc.category_name && (
-                        <>
-                          <span>•</span>
-                          <span className="text-purple-600">{doc.category_name}</span>
-                        </>
-                      )}
+              {filteredDocuments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No documents match your filters
+                </div>
+              ) : (
+                filteredDocuments.map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div className="flex-1">
+                      <Link to={`/questions/${doc.id}`} className="font-semibold text-gray-900 hover:text-primary-600">
+                        {doc.title}
+                      </Link>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                        <span>by {doc.author_name || doc.author_username}</span>
+                        <span>•</span>
+                        <span>{doc.views_count || 0} views</span>
+                        <span>•</span>
+                        <span>{doc.comment_count || 0} answers</span>
+                        {doc.category_name && (
+                          <>
+                            <span>•</span>
+                            <span className="text-purple-600">{doc.category_name}</span>
+                          </>
+                        )}
+                        <span>•</span>
+                        <span className="text-gray-500">{formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleTogglePublish(doc.id, doc.published)}
+                        className={`px-3 py-1 rounded text-sm font-medium ${
+                          doc.published
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                        }`}
+                      >
+                        {doc.published ? 'Unpublish' : 'Publish'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <TrashIcon className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleTogglePublish(doc.id, doc.published)}
-                      className={`px-3 py-1 rounded text-sm font-medium ${
-                        doc.published
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                      }`}
-                    >
-                      {doc.published ? 'Unpublish' : 'Publish'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDocument(doc.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}
