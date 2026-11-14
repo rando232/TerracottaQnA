@@ -38,11 +38,19 @@ const Moderation = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8000/api/admin/moderation', {
+      
+      // Load flags
+      const flagsResponse = await axios.get('http://localhost:8000/api/flags?status_filter=pending', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      setComments(response.data.recent_comments || []);
-      setFlaggedContent(response.data.flagged_content || []);
+      setFlaggedContent(flagsResponse.data || []);
+      
+      // Load recent comments (if you have an endpoint for this)
+      // const commentsResponse = await axios.get('http://localhost:8000/api/comments/recent', {
+      //   headers: { 'Authorization': `Bearer ${token}` }
+      // });
+      // setComments(commentsResponse.data || []);
+      
     } catch (error) {
       setError(error.response?.data?.detail || 'Failed to load data');
     } finally {
@@ -75,6 +83,20 @@ const Moderation = () => {
       loadData();
     } catch (error) {
       alert(error.response?.data?.detail || 'Failed to approve comment');
+    }
+  };
+
+  const handleResolveFlag = async (flagId, action) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(
+        `http://localhost:8000/api/flags/${flagId}`,
+        { new_status: action },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Failed to update flag');
     }
   };
 
@@ -184,22 +206,52 @@ const Moderation = () => {
                 No flagged content
               </div>
             ) : (
-              flaggedContent.map(item => (
-                <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <FlagIcon className="w-6 h-6 text-red-600" />
-                      <div>
-                        <p className="font-semibold text-gray-900">{item.title || 'Flagged Content'}</p>
-                        <p className="text-sm text-gray-500">Flagged by multiple users</p>
+              flaggedContent.map(flag => (
+                <div key={flag.id} className="bg-white rounded-lg shadow-sm border border-red-100 border-2 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start space-x-3 flex-1">
+                      <FlagIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {flag.target_type === 'document' ? 'Question' : 'Comment'}
+                          </span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 capitalize">
+                            {flag.reason.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Reported by <span className="font-medium">{flag.reporter_username}</span> • {formatDistanceToNow(new Date(flag.created_at), { addSuffix: true })}
+                        </p>
+                        {flag.description && (
+                          <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-200">
+                            <span className="font-medium">Details:</span> {flag.description}
+                          </p>
+                        )}
+                        <a 
+                          href={flag.target_type === 'document' ? `/questions/${flag.target_id}` : `/questions/${flag.target_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary-600 hover:underline mt-2 inline-block"
+                        >
+                          View {flag.target_type} →
+                        </a>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
-                      <button className="px-3 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200">
-                        Dismiss
+                    <div className="flex space-x-2 flex-shrink-0">
+                      <button 
+                        onClick={() => handleResolveFlag(flag.id, 'resolved')}
+                        className="px-4 py-2 bg-green-100 text-green-800 rounded hover:bg-green-200 text-sm font-medium"
+                        title="Mark as resolved and take action"
+                      >
+                        Resolve
                       </button>
-                      <button className="px-3 py-1 bg-red-100 text-red-800 rounded hover:bg-red-200">
-                        Remove
+                      <button 
+                        onClick={() => handleResolveFlag(flag.id, 'dismissed')}
+                        className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 text-sm font-medium"
+                        title="Dismiss as invalid report"
+                      >
+                        Dismiss
                       </button>
                     </div>
                   </div>

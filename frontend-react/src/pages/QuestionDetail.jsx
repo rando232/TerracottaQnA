@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown';
 import { formatDistanceToNow } from 'date-fns';
 import { documentsAPI, commentsAPI, votesAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import FlagButton from '../components/FlagButton';
 
 const QuestionDetail = () => {
   const { id } = useParams();
@@ -221,24 +222,33 @@ const QuestionDetail = () => {
             </div>
 
             {/* Action buttons */}
-            {canModify && (
-              <div className="flex items-center space-x-2">
-                <Link
-                  to={`/questions/${id}/edit`}
-                  className="p-2 text-gray-600 hover:text-primary-600 rounded-lg hover:bg-gray-100"
-                  title="Edit"
-                >
-                  <PencilIcon className="w-5 h-5" />
-                </Link>
-                <button
-                  onClick={handleDeleteQuestion}
-                  className="p-2 text-gray-600 hover:text-red-600 rounded-lg hover:bg-gray-100"
-                  title="Delete"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
-              </div>
-            )}
+            <div className="flex items-center space-x-2">
+              {canModify && (
+                <>
+                  <Link
+                    to={`/questions/${id}/edit`}
+                    className="p-2 text-gray-600 hover:text-primary-600 rounded-lg hover:bg-gray-100"
+                    title="Edit"
+                  >
+                    <PencilIcon className="w-5 h-5" />
+                  </Link>
+                  <button
+                    onClick={handleDeleteQuestion}
+                    className="p-2 text-gray-600 hover:text-red-600 rounded-lg hover:bg-gray-100"
+                    title="Delete"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+              {isAuthenticated && !canModify && (
+                <FlagButton 
+                  targetType="document" 
+                  targetId={question.id}
+                  onFlagSubmitted={() => {}}
+                />
+              )}
+            </div>
           </div>
 
           <div className="flex space-x-6">
@@ -353,15 +363,24 @@ const QuestionDetail = () => {
                         </span>
                       </div>
 
-                      {/* Delete button */}
-                      {user && (user.id === comment.author_id || ['super_admin', 'moderator'].includes(user.role)) && (
-                        <button
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="text-sm text-red-600 hover:text-red-700"
-                        >
-                          Delete
-                        </button>
-                      )}
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2">
+                        {user && (user.id === comment.author_id || ['super_admin', 'moderator'].includes(user.role)) && (
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="text-sm text-red-600 hover:text-red-700"
+                          >
+                            Delete
+                          </button>
+                        )}
+                        {isAuthenticated && user && user.id !== comment.author_id && (
+                          <FlagButton 
+                            targetType="comment" 
+                            targetId={comment.id}
+                            onFlagSubmitted={() => {}}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

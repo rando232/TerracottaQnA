@@ -590,6 +590,107 @@ def create_vote(vote_data: VoteCreate, current_user: dict = Depends(get_current_
     return {"message": "Vote updated", "vote_change": vote_change}
 
 # ============================================================================
+# FLAG ROUTES
+# ============================================================================
+
+@app.post("/api/flags", status_code=status.HTTP_201_CREATED)
+def create_flag(flag_data: FlagCreate, current_user: dict = Depends(get_current_user)):
+    """Flag a document or comment for moderation"""
+    
+    # Check if target exists
+    if flag_data.target_type == "document":
+        target = execute_query(
+            "SELECT id FROM documents WHERE id = %s",
+            (flag_data.target_id,),
+            fetch_one=True
+        )
+    else:  # comment
+        target = execute_query(
+            "SELECT id FROM comments WHERE id = %s",
+            (flag_data.target_id,),
+            fetch_one=True
+        )
+    
+    if not target:
+        raise HTTPException(status_code=404, detail=f"{flag_data.target_type.capitalize()} not found")
+    
+    # Check if user already flagged this
+    existing_flag = execute_query(
+        """SELECT id FROM flags 
+           WHERE reporter_id = %s AND target_type = %s AND target_id = %s AND status = 'pending'""",
+        (current_user['id'], flag_data.target_type, flag_data.target_id),
+        fetch_one=True
+    )
+    
+    if existing_flag:
+        raise HTTPException(status_code=400, detail="You have already flagged this item")
+    
+    # Create flag
+    flag_id = execute_query(
+        """INSERT INTO flags (target_type, target_id, reason, description, reporter_id, status)
+           VALUES (%s, %s, %s, %s, %s, 'pending')""",
+        (flag_data.target_type, flag_data.target_id, flag_data.reason.value, 
+         flag_data.description, current_user['id'])
+    )
+    
+    return {
+        "message": "Flag submitted for review",
+        "flag_id": flag_id
+    }
+
+@app.get("/api/flags")
+def get_flags(
+    status_filter: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all flags (moderator/admin only)"""
+    
+    if current_user['role'] not in ['super_admin', 'moderator']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    query = """
+        SELECT f.*, u.username as reporter_username
+        FROM flags f
+        JOIN users u ON f.reporter_id = u.id
+    """
+    
+    params = []
+    if status_filter:
+        query += " WHERE f.status = %s"
+        params.append(status_filter)
+    
+    query += " ORDER BY f.created_at DESC"
+    
+    return execute_query(query, tuple(params) if params else None, fetch_all=True)
+
+@app.patch("/api/flags/{flag_id}")
+def update_flag_status(
+    flag_id: int,
+    new_status: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update flag status (moderator/admin only)"""
+    
+    if current_user['role'] not in ['super_admin', 'moderator']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if new_status not in ['reviewed', 'resolved', 'dismissed']:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    flag = execute_query("SELECT * FROM flags WHERE id = %s", (flag_id,), fetch_one=True)
+    if not flag:
+        raise HTTPException(status_code=404, detail="Flag not found")
+    
+    execute_query(
+        """UPDATE flags 
+           SET status = %s, reviewed_at = NOW(), reviewed_by = %s 
+           WHERE id = %s""",
+        (new_status, current_user['id'], flag_id)
+    )
+    
+    return {"message": "Flag status updated", "status": new_status}
+
+# ============================================================================
 # CATEGORY & TAG ROUTES
 # ============================================================================
 

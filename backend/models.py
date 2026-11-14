@@ -24,6 +24,19 @@ class VoteType(str, Enum):
     UPVOTE = "upvote"
     DOWNVOTE = "downvote"
 
+class FlagReason(str, Enum):
+    SPAM = "spam"
+    OFFENSIVE = "offensive"
+    MISINFORMATION = "misinformation"
+    OFF_TOPIC = "off_topic"
+    OTHER = "other"
+
+class FlagStatus(str, Enum):
+    PENDING = "pending"
+    REVIEWED = "reviewed"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
 # User Models
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -114,6 +127,29 @@ class VoteCreate(BaseModel):
     target_type: str = Field(..., pattern="^(document|comment)$")
     target_id: int
     vote_type: VoteType
+
+# Flag Models
+class FlagCreate(BaseModel):
+    target_type: str = Field(..., pattern="^(document|comment)$")
+    target_id: int
+    reason: FlagReason
+    description: Optional[str] = None
+
+class FlagResponse(BaseModel):
+    id: int
+    target_type: str
+    target_id: int
+    reason: FlagReason
+    description: Optional[str]
+    status: FlagStatus
+    reporter_id: int
+    reporter_username: str
+    created_at: datetime
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
 
 # Category Models
 class CategoryBase(BaseModel):
