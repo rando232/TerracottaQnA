@@ -62,27 +62,11 @@ const AdminDashboard = () => {
       roles: ['super_admin', 'data_seo_specialist']
     },
     {
-      title: 'Search Analytics',
-      description: 'Query performance metrics, click-through rates, and search insights',
-      icon: MagnifyingGlassIcon,
-      link: '/admin/search-analytics',
-      color: 'purple',
-      roles: ['super_admin', 'data_seo_specialist']
-    },
-    {
       title: 'Database Viewer',
       description: 'View all database tables and export data',
       icon: CircleStackIcon,
       link: '/database',
       color: 'purple',
-      roles: ['super_admin']
-    },
-    {
-      title: 'System Settings',
-      description: 'System maintenance and search engine reindexing',
-      icon: CogIcon,
-      link: '/admin/system',
-      color: 'gray',
       roles: ['super_admin']
     }
   ];
