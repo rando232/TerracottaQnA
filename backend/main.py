@@ -649,9 +649,16 @@ def get_flags(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     query = """
-        SELECT f.*, u.username as reporter_username
+        SELECT 
+            f.*, 
+            u.username as reporter_username,
+            CASE 
+                WHEN f.target_type = 'comment' THEN c.document_id
+                ELSE f.target_id
+            END as document_id
         FROM flags f
         JOIN users u ON f.reporter_id = u.id
+        LEFT JOIN comments c ON f.target_type = 'comment' AND f.target_id = c.id
     """
     
     params = []

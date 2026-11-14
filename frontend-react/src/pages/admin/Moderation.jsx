@@ -229,7 +229,7 @@ const Moderation = () => {
                           </p>
                         )}
                         <a 
-                          href={flag.target_type === 'document' ? `/questions/${flag.target_id}` : `/questions/${flag.target_id}`}
+                          href={`/questions/${flag.document_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-primary-600 hover:underline mt-2 inline-block"
