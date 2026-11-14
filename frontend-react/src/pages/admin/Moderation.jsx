@@ -45,11 +45,11 @@ const Moderation = () => {
       });
       setFlaggedContent(flagsResponse.data || []);
       
-      // Load recent comments (if you have an endpoint for this)
-      // const commentsResponse = await axios.get('http://localhost:8000/api/comments/recent', {
-      //   headers: { 'Authorization': `Bearer ${token}` }
-      // });
-      // setComments(commentsResponse.data || []);
+      // Load recent comments
+      const commentsResponse = await axios.get('http://localhost:8000/api/admin/comments/recent', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setComments(commentsResponse.data || []);
       
     } catch (error) {
       setError(error.response?.data?.detail || 'Failed to load data');

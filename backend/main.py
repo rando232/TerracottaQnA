@@ -1076,6 +1076,24 @@ def get_moderation_data(current_user: dict = Depends(get_current_user)):
         "flagged_content": []  # Placeholder for flagged content feature
     }
 
+@app.get("/api/admin/comments/recent")
+def get_recent_comments(current_user: dict = Depends(get_current_user)):
+    """Get recent comments for moderation"""
+    
+    if current_user['role'] not in ['moderator', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Moderator access required")
+    
+    comments = execute_query(
+        """SELECT c.*, u.name as author_name, u.username as author_username
+           FROM comments c
+           JOIN users u ON c.author_id = u.id
+           ORDER BY c.created_at DESC
+           LIMIT 50""",
+        fetch_all=True
+    )
+    
+    return comments
+
 @app.put("/api/admin/comments/{comment_id}/approve")
 def approve_comment(comment_id: int, current_user: dict = Depends(get_current_user)):
     """Approve a comment"""
