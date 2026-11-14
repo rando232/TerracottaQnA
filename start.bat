@@ -11,14 +11,14 @@ timeout /t 3 /nobreak >nul
 
 REM Start Frontend
 echo [2/2] Starting Frontend Server...
-start "Terracotta Frontend" cmd /k "cd /d %~dp0frontend-react && npm start"
+start "Terracotta Frontend" cmd /k "cd /d %~dp0frontend-react && npm run dev"
 
 echo.
 echo ============================================
 echo Servers Starting...
 echo ============================================
 echo Backend:  http://localhost:8000
-echo Frontend: http://localhost:3000
+echo Frontend: http://localhost:5173
 echo ============================================
 echo.
 echo Press any key to close this window...
