@@ -1099,8 +1099,8 @@ def reindex_documents(current_user: dict = Depends(get_current_user)):
         search_engine.index.total_docs = 0
         
         for doc in documents:
-            text = doc['title'] + " " + doc['content']
-            search_engine.index.add_document(doc['id'], text)
+            # add_document takes doc_id, title, content as separate parameters
+            search_engine.index.add_document(doc['id'], doc['title'], doc['content'])
         
         # Recalculate avgdl
         if search_engine.index.doc_lengths:
