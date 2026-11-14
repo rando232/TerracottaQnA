@@ -16,6 +16,7 @@ import UserManagement from './pages/admin/UserManagement';
 import ContentManagement from './pages/admin/ContentManagement';
 import Moderation from './pages/admin/Moderation';
 import SEOAnalytics from './pages/admin/SEOAnalytics';
+import SystemSettings from './pages/admin/SystemSettings';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
             <Route path="/admin/content" element={<ContentManagement />} />
             <Route path="/admin/moderation" element={<Moderation />} />
             <Route path="/admin/seo" element={<SEOAnalytics />} />
+            <Route path="/admin/system" element={<SystemSettings />} />
             <Route path="/database" element={<Database />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

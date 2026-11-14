@@ -6,7 +6,8 @@ import {
   FlagIcon,
   ChartBarIcon,
   CircleStackIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -66,6 +67,14 @@ const AdminDashboard = () => {
       link: '/database',
       color: 'purple',
       roles: ['super_admin']
+    },
+    {
+      title: 'System Settings',
+      description: 'System maintenance and search engine reindexing',
+      icon: CogIcon,
+      link: '/admin/system',
+      color: 'gray',
+      roles: ['super_admin']
     }
   ];
 
@@ -78,7 +87,8 @@ const AdminDashboard = () => {
     blue: 'bg-blue-100 text-blue-600',
     yellow: 'bg-yellow-100 text-yellow-600',
     green: 'bg-green-100 text-green-600',
-    purple: 'bg-purple-100 text-purple-600'
+    purple: 'bg-purple-100 text-purple-600',
+    gray: 'bg-gray-100 text-gray-600'
   };
 
   return (

@@ -1047,6 +1047,67 @@ def root():
         "docs": "/docs"
     }
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint"""
+    try:
+        # Check database connection
+        execute_query("SELECT 1", fetch_one=True)
+        db_status = "healthy"
+    except:
+        db_status = "unhealthy"
+    
+    # Check search engine
+    search_status = "healthy" if search_engine else "unhealthy"
+    indexed_docs = len(search_engine.documents) if search_engine else 0
+    
+    return {
+        "status": "healthy" if db_status == "healthy" and search_status == "healthy" else "degraded",
+        "database": db_status,
+        "search_engine": search_status,
+        "indexed_documents": indexed_docs
+    }
+
+@app.post("/api/admin/reindex")
+def reindex_documents(current_user: dict = Depends(get_current_user)):
+    """Reindex all documents in the search engine"""
+    
+    if current_user['role'] != 'super_admin':
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    try:
+        # Get all published documents
+        documents = execute_query(
+            """SELECT id, title, content FROM documents 
+               WHERE status = 'published'
+               ORDER BY id""",
+            fetch_all=True
+        )
+        
+        # Clear and rebuild index
+        search_engine.documents.clear()
+        search_engine.inverted_index.clear()
+        search_engine.doc_lengths.clear()
+        
+        for doc in documents:
+            search_engine.add_document(doc['id'], doc['title'] + " " + doc['content'])
+        
+        # Recalculate avgdl
+        if search_engine.doc_lengths:
+            search_engine.avgdl = sum(search_engine.doc_lengths.values()) / len(search_engine.doc_lengths)
+        
+        # Save the updated index
+        search_engine.save_index()
+        
+        return {
+            "message": "Reindexing complete",
+            "indexed_documents": len(search_engine.documents),
+            "vocabulary_size": len(search_engine.inverted_index),
+            "avg_doc_length": round(search_engine.avgdl, 2)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Reindexing failed: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
