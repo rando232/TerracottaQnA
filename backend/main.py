@@ -1142,6 +1142,103 @@ def get_analytics(current_user: dict = Depends(get_current_user)):
         "avg_views": round(avg_views['avg'], 2) if avg_views and avg_views['avg'] else 0
     }
 
+@app.get("/api/admin/search-analytics")
+def get_search_analytics(current_user: dict = Depends(get_current_user)):
+    """Get detailed search analytics with metrics and percentages"""
+    
+    if current_user['role'] not in ['data_seo_specialist', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Data & SEO Specialist access required")
+    
+    # Summary stats
+    total_searches = execute_query(
+        "SELECT COUNT(*) as count FROM search_queries",
+        fetch_one=True
+    )
+    
+    unique_queries = execute_query(
+        "SELECT COUNT(DISTINCT query) as count FROM search_queries",
+        fetch_one=True
+    )
+    
+    avg_results = execute_query(
+        "SELECT AVG(result_count) as avg FROM search_queries",
+        fetch_one=True
+    )
+    
+    zero_results = execute_query(
+        "SELECT COUNT(*) as count FROM search_queries WHERE result_count = 0",
+        fetch_one=True
+    )
+    
+    zero_result_rate = 0
+    if total_searches and total_searches['count'] > 0:
+        zero_result_rate = round((zero_results['count'] / total_searches['count']) * 100, 1)
+    
+    # Top queries
+    top_queries = execute_query(
+        """SELECT query, COUNT(*) as search_count, AVG(result_count) as avg_results
+           FROM search_queries
+           GROUP BY query
+           ORDER BY search_count DESC
+           LIMIT 10""",
+        fetch_all=True
+    )
+    
+    # Zero result queries
+    zero_result_queries = execute_query(
+        """SELECT query, COUNT(*) as search_count
+           FROM search_queries
+           WHERE result_count = 0
+           GROUP BY query
+           ORDER BY search_count DESC
+           LIMIT 10""",
+        fetch_all=True
+    )
+    
+    # Click-through rates by query
+    ctr_by_query = execute_query(
+        """SELECT 
+               query,
+               COUNT(*) as searches,
+               SUM(CASE WHEN clicked_document_id IS NOT NULL THEN 1 ELSE 0 END) as clicks,
+               ROUND(SUM(CASE WHEN clicked_document_id IS NOT NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as ctr
+           FROM search_queries
+           GROUP BY query
+           HAVING COUNT(*) >= 3
+           ORDER BY searches DESC
+           LIMIT 20""",
+        fetch_all=True
+    )
+    
+    # Recent searches
+    recent_searches = execute_query(
+        """SELECT query, result_count, clicked_document_id, created_at
+           FROM search_queries
+           ORDER BY created_at DESC
+           LIMIT 50""",
+        fetch_all=True
+    )
+    
+    return {
+        "summary": {
+            "total_searches": total_searches['count'] if total_searches else 0,
+            "unique_queries": unique_queries['count'] if unique_queries else 0,
+            "avg_results": round(avg_results['avg'], 1) if avg_results and avg_results['avg'] else 0,
+            "zero_result_rate": f"{zero_result_rate}%"
+        },
+        "top_queries": [
+            {
+                "query": q['query'],
+                "search_count": q['search_count'],
+                "avg_results": round(q['avg_results'], 1)
+            }
+            for q in top_queries
+        ] if top_queries else [],
+        "zero_result_queries": zero_result_queries if zero_result_queries else [],
+        "ctr_by_query": ctr_by_query if ctr_by_query else [],
+        "recent_searches": recent_searches if recent_searches else []
+    }
+
 # ============================================================================
 # ROOT ENDPOINT
 # ============================================================================

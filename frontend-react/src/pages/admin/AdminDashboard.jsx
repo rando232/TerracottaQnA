@@ -7,7 +7,8 @@ import {
   ChartBarIcon,
   CircleStackIcon,
   ShieldCheckIcon,
-  CogIcon
+  CogIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -58,6 +59,14 @@ const AdminDashboard = () => {
       icon: ChartBarIcon,
       link: '/admin/seo',
       color: 'green',
+      roles: ['super_admin', 'data_seo_specialist']
+    },
+    {
+      title: 'Search Analytics',
+      description: 'Query performance metrics, click-through rates, and search insights',
+      icon: MagnifyingGlassIcon,
+      link: '/admin/search-analytics',
+      color: 'purple',
       roles: ['super_admin', 'data_seo_specialist']
     },
     {
