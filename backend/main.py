@@ -666,7 +666,7 @@ def get_flags(
 @app.patch("/api/flags/{flag_id}")
 def update_flag_status(
     flag_id: int,
-    new_status: str,
+    status_data: FlagStatusUpdate,
     current_user: dict = Depends(get_current_user)
 ):
     """Update flag status (moderator/admin only)"""
@@ -674,6 +674,7 @@ def update_flag_status(
     if current_user['role'] not in ['super_admin', 'moderator']:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    new_status = status_data.new_status
     if new_status not in ['reviewed', 'resolved', 'dismissed']:
         raise HTTPException(status_code=400, detail="Invalid status")
     

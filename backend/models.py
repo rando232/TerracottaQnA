@@ -151,6 +151,9 @@ class FlagResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class FlagStatusUpdate(BaseModel):
+    new_status: str
+
 # Category Models
 class CategoryBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
