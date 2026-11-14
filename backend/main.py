@@ -13,7 +13,7 @@ from database import execute_query, get_db_connection
 from auth import verify_password, get_password_hash, create_access_token, decode_access_token
 
 # Import IR Search System
-from search_api import register_search_routes, initialize_search_engine
+from search_api import register_search_routes, initialize_search_engine, get_search_engine
 
 load_dotenv()
 
@@ -1058,8 +1058,13 @@ def health_check():
         db_status = "unhealthy"
     
     # Check search engine
-    search_status = "healthy" if search_engine else "unhealthy"
-    indexed_docs = len(search_engine.documents) if search_engine else 0
+    try:
+        search_engine = get_search_engine()
+        search_status = "healthy"
+        indexed_docs = search_engine.index.total_docs if search_engine else 0
+    except:
+        search_status = "unhealthy"
+        indexed_docs = 0
     
     return {
         "status": "healthy" if db_status == "healthy" and search_status == "healthy" else "degraded",
@@ -1076,6 +1081,10 @@ def reindex_documents(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Super admin access required")
     
     try:
+        search_engine = get_search_engine()
+        if not search_engine:
+            raise HTTPException(status_code=500, detail="Search engine not initialized")
+        
         # Get all published documents
         documents = execute_query(
             """SELECT id, title, content FROM documents 
@@ -1085,25 +1094,27 @@ def reindex_documents(current_user: dict = Depends(get_current_user)):
         )
         
         # Clear and rebuild index
-        search_engine.documents.clear()
-        search_engine.inverted_index.clear()
-        search_engine.doc_lengths.clear()
+        search_engine.index.index.clear()
+        search_engine.index.doc_lengths.clear()
+        search_engine.index.total_docs = 0
         
         for doc in documents:
-            search_engine.add_document(doc['id'], doc['title'] + " " + doc['content'])
+            text = doc['title'] + " " + doc['content']
+            search_engine.index.add_document(doc['id'], text)
         
         # Recalculate avgdl
-        if search_engine.doc_lengths:
-            search_engine.avgdl = sum(search_engine.doc_lengths.values()) / len(search_engine.doc_lengths)
+        if search_engine.index.doc_lengths:
+            total_length = sum(search_engine.index.doc_lengths.values())
+            search_engine.index.avg_doc_length = total_length / len(search_engine.index.doc_lengths)
         
         # Save the updated index
-        search_engine.save_index()
+        search_engine.index.save('terracotta_index.pkl')
         
         return {
             "message": "Reindexing complete",
-            "indexed_documents": len(search_engine.documents),
-            "vocabulary_size": len(search_engine.inverted_index),
-            "avg_doc_length": round(search_engine.avgdl, 2)
+            "indexed_documents": search_engine.index.total_docs,
+            "vocabulary_size": len(search_engine.index.index),
+            "avg_doc_length": round(search_engine.index.avg_doc_length, 2)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Reindexing failed: {str(e)}")
